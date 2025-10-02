@@ -5,8 +5,8 @@ const contactDetails = [
   {
     icon: Phone,
     title: "Telefone",
-    content: "(11) 98765-4321",
-    link: "tel:+5511987654321",
+    content: "(75) 99139-7733",
+    link: "tel:+5575991397733",
   },
   {
     icon: Mail,
@@ -17,7 +17,7 @@ const contactDetails = [
   {
     icon: MapPin,
     title: "Endereço",
-    content: "Av. Paulista, 1000 - São Paulo, SP",
+    content: "AV Fraga Maia, Feira de santana, BA",
     link: "https://maps.google.com",
   },
   {
