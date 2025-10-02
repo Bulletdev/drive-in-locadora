@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from "lucide-react"
+import Image from "next/image"
 
 export function Footer() {
   return (
@@ -9,31 +10,13 @@ export function Footer() {
           {/* Logo e Descrição */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6 text-primary-foreground">
-                  <path
-                    d="M12 2L2 7L12 12L22 7L12 2Z"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M2 17L12 22L22 17"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M2 12L12 17L22 12"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
+              <Image
+                src="/images/logodrivein.png"
+                alt="Drive-In Locadora"
+                width={40}
+                height={40}
+                className="w-10 h-10"
+              />
               <div className="flex flex-col leading-none">
                 <span className="font-bold text-lg">DRIVE-IN</span>
                 <span className="text-xs text-muted-foreground">LOCADORA</span>
