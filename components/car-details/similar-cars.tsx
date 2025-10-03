@@ -3,38 +3,28 @@ import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
+import { getAllVehicles } from "@/lib/vehicles-data"
 
 interface SimilarCarsProps {
   currentCarId: string
   category: string
 }
 
-const similarCarsData = [
-  {
-    id: "2",
-    name: "Honda HR-V",
-    category: "SUV",
-    image: "/honda-hrv-suv.png",
-    pricePerDay: 250,
-  },
-  {
-    id: "4",
-    name: "Volkswagen T-Cross",
-    category: "SUV",
-    image: "/volkswagen-tcross-suv.png",
-    pricePerDay: 280,
-  },
-  {
-    id: "8",
-    name: "Nissan Kicks",
-    category: "SUV",
-    image: "/nissan-kicks-suv.png",
-    pricePerDay: 260,
-  },
-]
-
 export function SimilarCars({ currentCarId, category }: SimilarCarsProps) {
-  const similarCars = similarCarsData.filter((car) => car.id !== currentCarId)
+  const allVehicles = getAllVehicles()
+
+  // Filtrar veículos da mesma categoria, excluindo o atual
+  let similarCars = allVehicles
+    .filter((car) => car.category === category && car.id !== currentCarId)
+    .slice(0, 3)
+
+  // Se não houver veículos suficientes da mesma categoria, pegar outros disponíveis
+  if (similarCars.length < 3) {
+    const remainingCars = allVehicles
+      .filter((car) => car.id !== currentCarId && !similarCars.find(sc => sc.id === car.id))
+      .slice(0, 3 - similarCars.length)
+    similarCars = [...similarCars, ...remainingCars]
+  }
 
   return (
     <div>
@@ -46,14 +36,14 @@ export function SimilarCars({ currentCarId, category }: SimilarCarsProps) {
           <Card key={car.id} className="overflow-hidden group hover:shadow-xl transition-all">
             <div className="relative h-48 overflow-hidden">
               <Image
-                src={car.image || "/placeholder.svg"}
+                src={car.images[0] || "/placeholder.svg"}
                 alt={car.name}
                 fill
                 className="object-cover group-hover:scale-110 transition-transform duration-300"
               />
             </div>
             <CardContent className="p-6">
-              <h3 className="text-xl font-bold mb-2">{car.name}</h3>
+              <h3 className="text-xl font-bold mb-2">{car.name} {car.year}</h3>
               <p className="text-2xl font-bold text-primary mb-4">R$ {car.pricePerDay}/dia</p>
               <Button variant="outline" className="w-full bg-transparent" asChild>
                 <Link href={`/frota/${car.id}`}>

@@ -107,7 +107,7 @@ export function FleetFilters() {
         <div>
           <Label className="text-base font-semibold mb-3 block">Categoria</Label>
           <div className="space-y-2">
-            {["SUV", "Sedan", "Hatchback", "Coupe", "Esportivo"].map((category) => (
+            {["SUV", "Sedan", "Hatchback", "Cupê", "Esportivo"].map((category) => (
               <div key={category} className="flex items-center space-x-2">
                 <Checkbox
                   id={category}
@@ -157,7 +157,7 @@ export function FleetFilters() {
         <div>
           <Label className="text-base font-semibold mb-3 block">Ano</Label>
           <div className="space-y-2">
-            {["2024", "2023", "2022"].map((year) => (
+            {["2025", "2024", "2023"].map((year) => (
               <div key={year} className="flex items-center space-x-2">
                 <Checkbox
                   id={year}
