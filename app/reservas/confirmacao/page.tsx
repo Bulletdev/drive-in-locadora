@@ -1,37 +1,40 @@
+"use client"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, Calendar, MapPin, Car, User, Mail, Phone } from "lucide-react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
+import { Suspense } from "react"
 
-export const metadata = {
-  title: "Confirmação de Reserva | Drive-In Locadora",
-  description: "Sua reserva foi confirmada com sucesso",
+const extrasMap = {
+  insurance: { name: "Seguro Total", price: 50 },
+  gps: { name: "GPS", price: 20 },
+  childSeat: { name: "Cadeirinha Infantil", price: 15 },
 }
 
-export default function ReservationConfirmationPage() {
-  // In production, this would come from URL params or database
+function ReservationConfirmationContent() {
+  const searchParams = useSearchParams()
+
   const reservation = {
-    id: "RES-2024-001",
-    car: "Toyota Corolla 2024",
-    pickupDate: "15/02/2024",
-    returnDate: "20/02/2024",
-    pickupLocation: "Aeroporto de Guarulhos",
-    returnLocation: "Aeroporto de Guarulhos",
-    days: 5,
-    pricePerDay: 180,
-    extras: [
-      { name: "Seguro Total", price: 50 },
-      { name: "GPS", price: 20 },
-    ],
+    id: `RES-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`,
+    car: searchParams.get("carName") || "Veículo",
+    pickupDate: searchParams.get("pickupDate") ? new Date(searchParams.get("pickupDate")!).toLocaleDateString("pt-BR") : "",
+    returnDate: searchParams.get("returnDate") ? new Date(searchParams.get("returnDate")!).toLocaleDateString("pt-BR") : "",
+    pickupLocation: searchParams.get("pickupLocation") || "",
+    returnLocation: searchParams.get("returnLocation") || "",
+    days: parseInt(searchParams.get("days") || "0"),
+    pricePerDay: parseFloat(searchParams.get("pricePerDay") || "0"),
+    extras: JSON.parse(searchParams.get("extras") || "[]").map((id: string) => extrasMap[id as keyof typeof extrasMap]),
     customer: {
-      name: "João Silva",
-      email: "joao@email.com",
-      phone: "(11) 98765-4321",
+      name: searchParams.get("name") || "",
+      email: searchParams.get("email") || "",
+      phone: searchParams.get("phone") || "",
     },
   }
 
-  const extrasTotal = reservation.extras.reduce((sum, extra) => sum + extra.price, 0)
+  const extrasTotal = reservation.extras.reduce((sum: number, extra: { price: number }) => sum + extra.price, 0)
   const subtotal = reservation.days * reservation.pricePerDay
   const total = subtotal + extrasTotal * reservation.days
 
@@ -184,5 +187,13 @@ export default function ReservationConfirmationPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ReservationConfirmationPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen pt-24 pb-16 flex items-center justify-center">Carregando...</div>}>
+      <ReservationConfirmationContent />
+    </Suspense>
   )
 }

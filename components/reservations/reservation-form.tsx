@@ -10,14 +10,10 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Calendar, Car, Shield, Navigation, Baby, Loader2 } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
+import { getAvailableVehicles } from "@/lib/vehicles-data"
 
-const cars = [
-  { id: "1", name: "Toyota Corolla 2024", category: "Sedan", pricePerDay: 180 },
-  { id: "2", name: "Honda Civic 2024", category: "Sedan", pricePerDay: 190 },
-  { id: "3", name: "Jeep Compass 2024", category: "SUV", pricePerDay: 250 },
-  { id: "4", name: "Chevrolet Onix 2024", category: "Hatchback", pricePerDay: 120 },
-]
+const cars = getAvailableVehicles()
 
 const locations = [
   "Aeroporto de Guarulhos",
@@ -35,11 +31,12 @@ const extras = [
 
 export function ReservationForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
-    carId: "",
-    pickupDate: "",
-    returnDate: "",
+    carId: searchParams.get("car") || "",
+    pickupDate: searchParams.get("pickup") || "",
+    returnDate: searchParams.get("return") || "",
     pickupLocation: "",
     returnLocation: "",
     name: "",
@@ -71,8 +68,24 @@ export function ReservationForm() {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
+    // Build query string with reservation data
+    const reservationData = new URLSearchParams({
+      carId: formData.carId,
+      carName: selectedCar?.name || "",
+      pickupDate: formData.pickupDate,
+      returnDate: formData.returnDate,
+      pickupLocation: formData.pickupLocation,
+      returnLocation: formData.returnLocation,
+      days: days.toString(),
+      pricePerDay: selectedCar?.pricePerDay.toString() || "0",
+      extras: JSON.stringify(formData.selectedExtras),
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+    })
+
     console.log("[v0] Reservation submitted:", formData)
-    router.push("/reservas/confirmacao")
+    router.push(`/reservas/confirmacao?${reservationData.toString()}`)
   }
 
   const handleExtraToggle = (extraId: string) => {
@@ -110,7 +123,7 @@ export function ReservationForm() {
                 <SelectContent>
                   {cars.map((car) => (
                     <SelectItem key={car.id} value={car.id}>
-                      {car.name} - R$ {car.pricePerDay}/dia
+                      {car.name} {car.year} - R$ {car.pricePerDay}/dia
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -286,7 +299,7 @@ export function ReservationForm() {
               {selectedCar && days > 0 ? (
                 <>
                   <div className="space-y-2">
-                    <p className="text-sm font-semibold">{selectedCar.name}</p>
+                    <p className="text-sm font-semibold">{selectedCar.name} {selectedCar.year}</p>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Diária ({days}x)</span>
                       <span>R$ {selectedCar.pricePerDay.toFixed(2)}</span>
