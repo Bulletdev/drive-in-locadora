@@ -14,11 +14,33 @@ export function FleetFilters() {
   const searchParams = useSearchParams()
   const [priceRange, setPriceRange] = useState([100, 500])
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedTransmissions, setSelectedTransmissions] = useState<string[]>([])
+  const [selectedYears, setSelectedYears] = useState<string[]>([])
 
   useEffect(() => {
     const categoriaUrl = searchParams.get("categoria")
+    const categorias = searchParams.get("categorias")?.split(",") || []
+    const transmissoes = searchParams.get("transmissoes")?.split(",") || []
+    const anos = searchParams.get("anos")?.split(",") || []
+    const minPreco = searchParams.get("minPreco")
+    const maxPreco = searchParams.get("maxPreco")
+
     if (categoriaUrl && !selectedCategories.includes(categoriaUrl)) {
       setSelectedCategories([categoriaUrl])
+    } else if (categorias.length > 0) {
+      setSelectedCategories(categorias)
+    }
+
+    if (transmissoes.length > 0) {
+      setSelectedTransmissions(transmissoes)
+    }
+
+    if (anos.length > 0) {
+      setSelectedYears(anos)
+    }
+
+    if (minPreco && maxPreco) {
+      setPriceRange([parseInt(minPreco), parseInt(maxPreco)])
     }
   }, [searchParams])
 
@@ -28,8 +50,43 @@ export function FleetFilters() {
     )
   }
 
+  const toggleTransmission = (transmission: string) => {
+    setSelectedTransmissions((prev) =>
+      prev.includes(transmission) ? prev.filter((t) => t !== transmission) : [...prev, transmission],
+    )
+  }
+
+  const toggleYear = (year: string) => {
+    setSelectedYears((prev) =>
+      prev.includes(year) ? prev.filter((y) => y !== year) : [...prev, year],
+    )
+  }
+
+  const applyFilters = () => {
+    const params = new URLSearchParams()
+
+    if (selectedCategories.length > 0) {
+      params.set("categorias", selectedCategories.join(","))
+    }
+
+    if (selectedTransmissions.length > 0) {
+      params.set("transmissoes", selectedTransmissions.join(","))
+    }
+
+    if (selectedYears.length > 0) {
+      params.set("anos", selectedYears.join(","))
+    }
+
+    params.set("minPreco", priceRange[0].toString())
+    params.set("maxPreco", priceRange[1].toString())
+
+    router.push(`/frota?${params.toString()}`)
+  }
+
   const clearFilters = () => {
     setSelectedCategories([])
+    setSelectedTransmissions([])
+    setSelectedYears([])
     setPriceRange([100, 500])
     router.push("/frota")
   }
@@ -83,7 +140,11 @@ export function FleetFilters() {
           <div className="space-y-2">
             {["Automático", "Manual"].map((transmission) => (
               <div key={transmission} className="flex items-center space-x-2">
-                <Checkbox id={transmission} />
+                <Checkbox
+                  id={transmission}
+                  checked={selectedTransmissions.includes(transmission)}
+                  onCheckedChange={() => toggleTransmission(transmission)}
+                />
                 <label htmlFor={transmission} className="text-sm cursor-pointer">
                   {transmission}
                 </label>
@@ -98,7 +159,11 @@ export function FleetFilters() {
           <div className="space-y-2">
             {["2024", "2023", "2022"].map((year) => (
               <div key={year} className="flex items-center space-x-2">
-                <Checkbox id={year} />
+                <Checkbox
+                  id={year}
+                  checked={selectedYears.includes(year)}
+                  onCheckedChange={() => toggleYear(year)}
+                />
                 <label htmlFor={year} className="text-sm cursor-pointer">
                   {year}
                 </label>
@@ -107,7 +172,9 @@ export function FleetFilters() {
           </div>
         </div>
 
-        <Button className="w-full">Aplicar Filtros</Button>
+        <Button className="w-full" onClick={applyFilters}>
+          Aplicar Filtros
+        </Button>
       </CardContent>
     </Card>
   )
