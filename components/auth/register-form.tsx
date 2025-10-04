@@ -77,8 +77,8 @@ export function RegisterForm() {
         return
       }
 
-      router.push("/area-cliente")
-      router.refresh()
+      // Usar window.location para garantir reload completo e evitar problemas com RSC
+      window.location.href = "/area-cliente"
     } catch (error) {
       console.error("Erro ao registrar:", error)
       setError("Erro ao criar conta. Tente novamente.")

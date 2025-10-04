@@ -38,8 +38,8 @@ export function LoginForm() {
         return
       }
 
-      router.push("/area-cliente")
-      router.refresh()
+      // Usar window.location para garantir reload completo e evitar problemas com RSC
+      window.location.href = "/area-cliente"
     } catch (error) {
       console.error("Erro ao fazer login:", error)
       setError("Erro ao fazer login. Tente novamente.")
