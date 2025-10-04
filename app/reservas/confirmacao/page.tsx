@@ -27,7 +27,7 @@ function ReservationConfirmationContent() {
     days: parseInt(searchParams.get("days") || "0"),
     pricePerDay: parseFloat(searchParams.get("pricePerDay") || "0"),
     extras: JSON.parse(searchParams.get("extras") || "[]").map((id: string) => extrasMap[id as keyof typeof extrasMap]),
-    customer: {
+    customer: {clear
       name: searchParams.get("name") || "",
       email: searchParams.get("email") || "",
       phone: searchParams.get("phone") || "",
