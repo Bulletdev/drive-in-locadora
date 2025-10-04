@@ -9,10 +9,12 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { signIn } from "next-auth/react"
 
 export function LoginForm() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState("")
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -21,14 +23,28 @@ export function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    setError("")
 
-    // Simulate authentication
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      const result = await signIn("credentials", {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      })
 
-    console.log("[v0] Login attempt:", formData.email)
+      if (result?.error) {
+        setError("Email ou senha inválidos")
+        setIsSubmitting(false)
+        return
+      }
 
-    // In production, this would validate credentials
-    router.push("/area-cliente")
+      router.push("/area-cliente")
+      router.refresh()
+    } catch (error) {
+      console.error("Erro ao fazer login:", error)
+      setError("Erro ao fazer login. Tente novamente.")
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -58,6 +74,10 @@ export function LoginForm() {
               placeholder="••••••••"
             />
           </div>
+
+          {error && (
+            <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">{error}</div>
+          )}
 
           <div className="flex items-center justify-between text-sm">
             <a href="#" className="text-primary hover:underline">

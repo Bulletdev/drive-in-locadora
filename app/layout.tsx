@@ -8,6 +8,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { WhatsAppButton } from "@/components/whatsapp-button"
 import { Suspense } from "react"
+import { Providers } from "./providers"
 
 export const metadata: Metadata = {
   title: "Drive-In Locadora | Aluguel de Carros",
@@ -23,13 +24,15 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Header />
-          <main>{children}</main>
-          <Footer />
-          <WhatsAppButton />
-        </Suspense>
-        <Analytics />
+        <Providers>
+          <Suspense fallback={<div>Loading...</div>}>
+            <Header />
+            <main>{children}</main>
+            <Footer />
+            <WhatsAppButton />
+          </Suspense>
+          <Analytics />
+        </Providers>
       </body>
     </html>
   )

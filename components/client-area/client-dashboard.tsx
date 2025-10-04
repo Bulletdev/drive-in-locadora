@@ -1,18 +1,24 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, Car, User, LogOut, Clock, MapPin, FileText } from "lucide-react"
 import Link from "next/link"
+import { signOut } from "next-auth/react"
+import { EditProfileDialog } from "./edit-profile-dialog"
 
-// Mock data - in production this would come from a database
-const user = {
-  name: "João Silva",
-  email: "joao@email.com",
-  phone: "(11) 98765-4321",
-  cpf: "123.456.789-00",
+interface ClientDashboardProps {
+  user: {
+    id: string
+    name: string
+    email: string
+    phone: string
+    cpf: string
+    createdAt: string
+  }
 }
 
 const reservations = [
@@ -51,7 +57,13 @@ const statusConfig = {
   cancelled: { label: "Cancelada", variant: "outline" as const, color: "bg-gray-500" },
 }
 
-export function ClientDashboard() {
+export function ClientDashboard({ user }: ClientDashboardProps) {
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false)
+
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: "/" })
+  }
+
   return (
     <div className="min-h-screen pt-24 pb-16 bg-muted/30">
       <div className="container mx-auto px-4">
@@ -63,11 +75,9 @@ export function ClientDashboard() {
             </h1>
             <p className="text-muted-foreground">Gerencie suas reservas e informações</p>
           </div>
-          <Button variant="outline" asChild>
-            <Link href="/login">
-              <LogOut className="w-4 h-4 mr-2" />
-              Sair
-            </Link>
+          <Button variant="outline" onClick={handleSignOut}>
+            <LogOut className="w-4 h-4 mr-2" />
+            Sair
           </Button>
         </div>
 
@@ -170,8 +180,10 @@ export function ClientDashboard() {
                           <p className="text-sm text-muted-foreground">Total</p>
                           <p className="text-2xl font-bold text-primary">R$ {reservation.total.toFixed(2)}</p>
                         </div>
-                        <Button variant="outline" size="sm">
-                          Ver Detalhes
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/area-cliente/reserva/${reservation.id}`}>
+                            Ver Detalhes
+                          </Link>
                         </Button>
                       </div>
                     </div>
@@ -208,7 +220,9 @@ export function ClientDashboard() {
                 </div>
 
                 <div className="pt-4 border-t">
-                  <Button variant="outline">Editar Informações</Button>
+                  <Button variant="outline" onClick={() => setIsEditProfileOpen(true)}>
+                    Editar Informações
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -227,6 +241,9 @@ export function ClientDashboard() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Edit Profile Dialog */}
+        <EditProfileDialog user={user} open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen} />
       </div>
     </div>
   )

@@ -10,10 +10,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { signIn } from "next-auth/react"
 
 export function RegisterForm() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState("")
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -26,26 +28,62 @@ export function RegisterForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError("")
 
     if (formData.password !== formData.confirmPassword) {
-      alert("As senhas não coincidem!")
+      setError("As senhas não coincidem!")
       return
     }
 
     if (!formData.acceptTerms) {
-      alert("Você precisa aceitar os termos de uso!")
+      setError("Você precisa aceitar os termos de uso!")
       return
     }
 
     setIsSubmitting(true)
 
-    // Simulate registration
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    try {
+      // Criar conta
+      const response = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          cpf: formData.cpf,
+          password: formData.password,
+        }),
+      })
 
-    console.log("[v0] Registration:", formData.email)
+      const data = await response.json()
 
-    // In production, this would create the account
-    router.push("/area-cliente")
+      if (!response.ok) {
+        setError(data.error || "Erro ao criar conta")
+        setIsSubmitting(false)
+        return
+      }
+
+      // Login automático após cadastro
+      const result = await signIn("credentials", {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError("Conta criada, mas erro ao fazer login. Tente fazer login manualmente.")
+        setIsSubmitting(false)
+        return
+      }
+
+      router.push("/area-cliente")
+      router.refresh()
+    } catch (error) {
+      console.error("Erro ao registrar:", error)
+      setError("Erro ao criar conta. Tente novamente.")
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -124,6 +162,10 @@ export function RegisterForm() {
               minLength={6}
             />
           </div>
+
+          {error && (
+            <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">{error}</div>
+          )}
 
           <div className="flex items-start space-x-2">
             <Checkbox
