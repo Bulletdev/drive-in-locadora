@@ -4,7 +4,10 @@ import { authConfig } from "./auth.config"
 export default NextAuth(authConfig).auth
 
 export const config = {
+  // Apenas interceptar rotas específicas, não todas as requisições
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/area-cliente/:path*",
+    "/login",
+    "/cadastro",
   ],
 }

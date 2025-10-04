@@ -8,14 +8,12 @@ export const authConfig = {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user
       const isOnClientArea = nextUrl.pathname.startsWith("/area-cliente")
-      const isOnAuth = nextUrl.pathname === "/login" || nextUrl.pathname === "/cadastro"
 
-      if (isOnClientArea) {
-        if (isLoggedIn) return true
+      // Apenas proteger área do cliente
+      if (isOnClientArea && !isLoggedIn) {
         return false // Redireciona para login
-      } else if (isOnAuth) {
-        if (isLoggedIn) return Response.redirect(new URL("/area-cliente", nextUrl))
       }
+
       return true
     },
   },

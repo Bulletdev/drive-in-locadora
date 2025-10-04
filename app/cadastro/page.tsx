@@ -1,13 +1,21 @@
 import { RegisterForm } from "@/components/auth/register-form"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import { auth } from "@/lib/auth"
+import { redirect } from "next/navigation"
 
 export const metadata = {
   title: "Cadastro | Drive-In Locadora",
   description: "Crie sua conta",
 }
 
-export default function RegisterPage() {
+export default async function RegisterPage() {
+  const session = await auth()
+
+  if (session?.user) {
+    redirect("/area-cliente")
+  }
+
   return (
     <div className="min-h-screen pt-24 pb-16 flex items-center justify-center">
       <div className="container mx-auto px-4">

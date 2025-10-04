@@ -1,13 +1,21 @@
 import { LoginForm } from "@/components/auth/login-form"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import { auth } from "@/lib/auth"
+import { redirect } from "next/navigation"
 
 export const metadata = {
   title: "Login | Drive-In Locadora",
   description: "Acesse sua conta",
 }
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const session = await auth()
+
+  if (session?.user) {
+    redirect("/area-cliente")
+  }
+
   return (
     <div className="min-h-screen pt-24 pb-16 flex items-center justify-center">
       <div className="container mx-auto px-4">
