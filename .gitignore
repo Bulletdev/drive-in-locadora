@@ -30,3 +30,4 @@ claude
 .claude/
 docs/brmodelo_guide.md
 docs/presentation-outline.md
+/backend-java/target
