@@ -1,0 +1,128 @@
+erDiagram
+    manufacturers ||--o{ vehicle_models : has
+    vehicle_models ||--o{ vehicles : contains
+
+    users ||--o{ sales : buyer
+    users ||--o{ sales : seller
+    vehicles ||--o{ sales : sold_in
+
+    sales ||--o{ payments : has
+    sales ||--o{ commissions : generates
+    sales ||--o{ invoices : billed_by
+
+    vehicles ||--o{ services : maintenance
+    users ||--o{ services : requested_by
+
+    users ||--o{ test_drives : schedules
+    vehicles ||--o{ test_drives : subject
+
+    vehicles ||--o{ vehicle_options : has
+    options ||--o{ vehicle_options : assigned
+
+    manufacturers {
+        bigint id
+        varchar name
+    }
+    vehicle_models {
+        bigint id
+        bigint manufacturer_id
+        varchar name
+        year year
+    }
+    vehicles {
+        bigint id
+        bigint model_id
+        varchar vin
+        varchar color
+        int mileage
+        decimal price
+        decimal cost
+        enum status "disponivel|vendido|reservado|manutencao"
+        date entry_date
+        json features_json
+        timestamp created_at
+        timestamp updated_at
+    }
+    users {
+        bigint id
+        enum role "cliente|vendedor|gerente|admin"
+    }
+    sales {
+        bigint id
+        bigint user_id
+        bigint vehicle_id
+        bigint seller_id
+        date sale_date
+        decimal total_price
+        enum payment_method "a_vista|financiado|cartao|boleto"
+        enum status "pendente|concluida|cancelada"
+        timestamp created_at
+        timestamp updated_at
+    }
+    payments {
+        bigint id
+        bigint sale_id
+        decimal amount
+        date payment_date
+        enum method "a_vista|financiado|cartao|boleto"
+        timestamp created_at
+    }
+    commissions {
+        bigint id
+        bigint sale_id
+        bigint seller_id
+        decimal percentage
+        decimal amount
+        timestamp created_at
+    }
+    services {
+        bigint id
+        bigint vehicle_id
+        bigint user_id
+        text description
+        date service_date
+        decimal cost
+        timestamp created_at
+        timestamp updated_at
+    }
+    invoices {
+        bigint id
+        bigint sale_id
+        varchar invoice_number
+        date issue_date
+        decimal tax_amount
+        varchar sefaz_key
+        enum sefaz_status "emitida|cancelada|contingencia|erro"
+        timestamp created_at
+        timestamp updated_at
+    }
+    test_drives {
+        bigint id
+        bigint user_id
+        bigint vehicle_id
+        datetime scheduled_at
+        enum status "agendado|realizado|cancelado"
+        text notes
+        timestamp created_at
+        timestamp updated_at
+    }
+    options {
+        bigint id
+        varchar name
+    }
+    vehicle_options {
+        bigint vehicle_id
+        bigint option_id
+    }
+    audit_logs {
+        bigint id
+        varchar table_name
+        enum action "INSERT|UPDATE|DELETE"
+        varchar record_id
+        json changes
+        timestamp created_at
+    }
+
+%% Notes on business logic and auditing (from SQL triggers):
+%% - After INSERT/UPDATE/DELETE on `sales`, vehicle status is updated and an audit log is inserted.
+%% - After UPDATE on `vehicles`, an audit log records status and price changes.
