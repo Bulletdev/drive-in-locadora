@@ -1,4 +1,4 @@
-import { getAllVehicles, getVehicle } from "@/lib/vehicles-data"
+import { getAllVehicles, getVehicle, getVehicleBySlug } from "@/lib/vehicles-data"
 
 const getBaseUrl = () => {
   // On server-side prefer server-only var; on client use public var
@@ -168,7 +168,7 @@ export async function apiGetVehicles(params?: {
   return { success: true, data }
 }
 
-export async function apiGetVehicle(id: string) {
+export async function apiGetVehicle(idOrSlug: string) {
   const forceMocks = (process.env.NEXT_PUBLIC_USE_MOCKS === "true") || (process.env.USE_MOCKS === "true")
   const res = await request<{
     id: string
@@ -184,10 +184,12 @@ export async function apiGetVehicle(id: string) {
     doors?: number
     airConditioning?: boolean
     features?: string[]
-  }>(`/api/vehicles/${id}`, { method: "GET" })
+  }>(`/api/vehicles/${idOrSlug}`, { method: "GET" })
   if (res.success && res.data && !forceMocks) return res
 
-  const v = getVehicle(id)
+  // First try matching by slug (e.g., "toyota-corolla-2024")
+  const bySlug = getVehicleBySlug(idOrSlug)
+  const v = bySlug ?? getVehicle(idOrSlug)
   if (!v) return { success: false, error: "Veículo não encontrado" }
   const data = {
     id: v.id,
