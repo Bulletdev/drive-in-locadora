@@ -6,10 +6,12 @@ import { Menu, X, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
+import { useSession, signOut } from "next-auth/react"
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const { data: session, status } = useSession()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -60,15 +62,29 @@ export function Header() {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/login">
-                <User className="w-4 h-4 mr-2" />
-                Login
-              </Link>
-            </Button>
-            <Button size="sm" asChild>
-              <Link href="/cadastro">Cadastre-se</Link>
-            </Button>
+            {status === "authenticated" ? (
+              <>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/area-cliente">
+                    <User className="w-4 h-4 mr-2" />
+                    {session?.user?.name || session?.user?.email || "Minha Conta"}
+                  </Link>
+                </Button>
+                <Button size="sm" onClick={() => signOut({ callbackUrl: "/" })}>Sair</Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/login">
+                    <User className="w-4 h-4 mr-2" />
+                    Login
+                  </Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link href="/cadastro">Cadastre-se</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -96,15 +112,29 @@ export function Header() {
                 </Link>
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t">
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/login">
-                    <User className="w-4 h-4 mr-2" />
-                    Login
-                  </Link>
-                </Button>
-                <Button size="sm" asChild>
-                  <Link href="/cadastro">Cadastre-se</Link>
-                </Button>
+                {status === "authenticated" ? (
+                  <>
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href="/area-cliente" onClick={() => setIsMobileMenuOpen(false)}>
+                        <User className="w-4 h-4 mr-2" />
+                        {session?.user?.name || session?.user?.email || "Minha Conta"}
+                      </Link>
+                    </Button>
+                    <Button size="sm" onClick={() => { setIsMobileMenuOpen(false); signOut({ callbackUrl: "/" }) }}>Sair</Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                        <User className="w-4 h-4 mr-2" />
+                        Login
+                      </Link>
+                    </Button>
+                    <Button size="sm" asChild>
+                      <Link href="/cadastro" onClick={() => setIsMobileMenuOpen(false)}>Cadastre-se</Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </nav>
           </div>

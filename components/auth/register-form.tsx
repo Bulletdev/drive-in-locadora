@@ -11,6 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { signIn } from "next-auth/react"
+import { apiRegister } from "@/lib/api-client"
+import { maskCep, maskCpf, maskPhoneBR, onlyDigits, maskStateUF } from "@/lib/utils"
 
 export function RegisterForm() {
   const router = useRouter()
@@ -24,6 +26,18 @@ export function RegisterForm() {
     password: "",
     confirmPassword: "",
     acceptTerms: false,
+    // Endereço
+    addressStreet: "",
+    addressNumber: "",
+    addressComplement: "",
+    addressNeighborhood: "",
+    addressCity: "",
+    addressState: "",
+    addressCep: "",
+    // CNH
+    birthDate: "",
+    cnhNumber: "",
+    cnhExpiry: "",
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,38 +54,86 @@ export function RegisterForm() {
       return
     }
 
+    // Validações adicionais para locadora (concessionária)
+    // Endereço obrigatório: rua, número, cidade, estado, CEP
+    const requiredAddress = [
+      formData.addressStreet,
+      formData.addressNumber,
+      formData.addressCity,
+      formData.addressState,
+      formData.addressCep,
+    ]
+    if (requiredAddress.some((f) => !String(f).trim())) {
+      setError("Preencha os campos de endereço obrigatórios (Rua, Número, Cidade, Estado, CEP).")
+      return
+    }
+
+    // Data de nascimento (mínimo 21 anos)
+    const today = new Date()
+    const dob = formData.birthDate ? new Date(formData.birthDate) : null
+    if (!dob || Number.isNaN(dob.getTime())) {
+      setError("Informe sua data de nascimento válida.")
+      return
+    }
+    const hadBirthdayThisYear =
+      today.getMonth() > dob.getMonth() ||
+      (today.getMonth() === dob.getMonth() && today.getDate() >= dob.getDate())
+    const age = today.getFullYear() - dob.getFullYear() - (hadBirthdayThisYear ? 0 : 1)
+    if (age < 21) {
+      setError("É necessário ter pelo menos 21 anos para reservar.")
+      return
+    }
+
+    // CNH: número e validade futura
+    if (!String(formData.cnhNumber).trim()) {
+      setError("Informe o número da CNH.")
+      return
+    }
+    const cnhExp = formData.cnhExpiry ? new Date(formData.cnhExpiry) : null
+    if (!cnhExp || Number.isNaN(cnhExp.getTime()) || cnhExp <= today) {
+      setError("Informe uma validade de CNH futura e válida.")
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
-      // Criar conta
-      const response = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          cpf: formData.cpf,
-          password: formData.password,
-        }),
+      // Criar conta via API externa
+      const registerResult = await apiRegister({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        cpf: formData.cpf,
+        password: formData.password,
+        // Endereço
+        addressStreet: formData.addressStreet,
+        addressNumber: formData.addressNumber,
+        addressComplement: formData.addressComplement || "",
+        addressNeighborhood: formData.addressNeighborhood || "",
+        addressCity: formData.addressCity,
+        addressState: formData.addressState,
+        addressCep: formData.addressCep,
+        // CNH
+        birthDate: formData.birthDate,
+        cnhNumber: formData.cnhNumber,
+        cnhExpiry: formData.cnhExpiry,
+        cnhCategory: formData.cnhCategory || undefined, undefined,
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error || "Erro ao criar conta")
+      if (!registerResult.success) {
+        setError(registerResult.error || "Erro ao criar conta")
         setIsSubmitting(false)
         return
       }
 
       // Login automático após cadastro
-      const result = await signIn("credentials", {
+      const signInResult = await signIn("credentials", {
         email: formData.email,
         password: formData.password,
         redirect: false,
       })
 
-      if (result?.error) {
+      if (signInResult?.error) {
         setError("Conta criada, mas erro ao fazer login. Tente fazer login manualmente.")
         setIsSubmitting(false)
         return
@@ -120,7 +182,7 @@ export function RegisterForm() {
                 id="phone"
                 type="tel"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, phone: maskPhoneBR(e.target.value) })}
                 required
                 placeholder="(00) 00000-0000"
               />
@@ -130,7 +192,7 @@ export function RegisterForm() {
               <Input
                 id="cpf"
                 value={formData.cpf}
-                onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, cpf: maskCpf(e.target.value) })}
                 required
                 placeholder="000.000.000-00"
               />
@@ -161,6 +223,122 @@ export function RegisterForm() {
               placeholder="••••••••"
               minLength={6}
             />
+          </div>
+
+          {/* Endereço */}
+          <div className="pt-2">
+            <h2 className="text-sm font-semibold mb-2">Endereço</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <Label htmlFor="addressStreet">Rua</Label>
+                <Input
+                  id="addressStreet"
+                  value={formData.addressStreet}
+                  onChange={(e) => setFormData({ ...formData, addressStreet: e.target.value })}
+                  required
+                  placeholder="Rua/Avenida"
+                />
+              </div>
+              <div>
+                <Label htmlFor="addressNumber">Número</Label>
+                <Input
+                  id="addressNumber"
+                  value={formData.addressNumber}
+                  onChange={(e) => setFormData({ ...formData, addressNumber: e.target.value })}
+                  required
+                  placeholder="123"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div>
+                <Label htmlFor="addressNeighborhood">Bairro</Label>
+                <Input
+                  id="addressNeighborhood"
+                  value={formData.addressNeighborhood}
+                  onChange={(e) => setFormData({ ...formData, addressNeighborhood: e.target.value })}
+                  placeholder="Bairro"
+                />
+              </div>
+              <div>
+                <Label htmlFor="addressCity">Cidade</Label>
+                <Input
+                  id="addressCity"
+                  value={formData.addressCity}
+                  onChange={(e) => setFormData({ ...formData, addressCity: e.target.value })}
+                  required
+                  placeholder="São Paulo"
+                />
+              </div>
+              <div>
+                <Label htmlFor="addressState">Estado</Label>
+                <Input
+                  id="addressState"
+                  value={formData.addressState}
+                  onChange={(e) => setFormData({ ...formData, addressState: maskStateUF(e.target.value) })}
+                  required
+                  placeholder="SP"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div>
+                <Label htmlFor="addressCep">CEP</Label>
+                <Input
+                  id="addressCep"
+                  value={formData.addressCep}
+                  onChange={(e) => setFormData({ ...formData, addressCep: maskCep(e.target.value) })}
+                  required
+                  placeholder="00000-000"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label htmlFor="addressComplement">Complemento</Label>
+                <Input
+                  id="addressComplement"
+                  value={formData.addressComplement}
+                  onChange={(e) => setFormData({ ...formData, addressComplement: e.target.value })}
+                  placeholder="Apto, bloco, referência"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* CNH e elegibilidade */}
+          <div className="pt-2">
+            <h2 className="text-sm font-semibold mb-2">Informações de CNH</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="birthDate">Data de Nascimento</Label>
+                <Input
+                  id="birthDate"
+                  type="date"
+                  value={formData.birthDate}
+                  onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="cnhNumber">Número da CNH</Label>
+                <Input
+                  id="cnhNumber"
+                  value={formData.cnhNumber}
+                  onChange={(e) => setFormData({ ...formData, cnhNumber: onlyDigits(e.target.value, 11) })}
+                  required
+                  placeholder="00000000000"
+                />
+              </div>
+              <div>
+                <Label htmlFor="cnhExpiry">Validade da CNH</Label>
+                <Input
+                  id="cnhExpiry"
+                  type="date"
+                  value={formData.cnhExpiry}
+                  onChange={(e) => setFormData({ ...formData, cnhExpiry: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
           </div>
 
           {error && (

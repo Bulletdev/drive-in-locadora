@@ -16,11 +16,12 @@ interface EditProfileDialogProps {
     phone: string
     cpf: string
   }
+  accessToken?: string
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialogProps) {
+export function EditProfileDialog({ user, accessToken, open, onOpenChange }: EditProfileDialogProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
@@ -35,8 +36,21 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
     setError("")
 
     try {
-      // Simular atualização (em produção, fazer requisição à API)
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      if (!accessToken) {
+        throw new Error("Sessão expirada. Faça login novamente.")
+      }
+      const res = await fetch("/api/users/me", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ name: formData.name, phone: formData.phone }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body?.error || res.statusText)
+      }
 
       // Fechar dialog
       onOpenChange(false)
@@ -45,7 +59,7 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
       router.refresh()
     } catch (error) {
       console.error("Erro ao atualizar perfil:", error)
-      setError("Erro ao atualizar perfil. Tente novamente.")
+      setError(error instanceof Error ? error.message : "Erro ao atualizar perfil. Tente novamente.")
       setIsSubmitting(false)
     }
   }

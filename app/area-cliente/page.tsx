@@ -1,7 +1,7 @@
 import { ClientDashboard } from "@/components/client-area/client-dashboard"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
-import { getUserByEmail } from "@/lib/users-storage"
+import { apiMe } from "@/lib/api-client"
 
 export const metadata = {
   title: "Área do Cliente | Drive-In Locadora",
@@ -14,12 +14,15 @@ export default async function ClientAreaPage() {
   if (!session?.user?.email) {
     redirect("/login")
   }
-
-  const user = getUserByEmail(session.user.email)
-
-  if (!user) {
+  const accessToken = (session as any).accessToken as string | undefined
+  if (!accessToken) {
     redirect("/login")
   }
 
-  return <ClientDashboard user={user} />
+  const me = await apiMe(accessToken)
+  if (!me.success || !me.data) {
+    redirect("/login")
+  }
+
+  return <ClientDashboard user={me.data} accessToken={accessToken} />
 }

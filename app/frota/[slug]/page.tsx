@@ -3,20 +3,24 @@ import { CarSpecifications } from "@/components/car-details/car-specifications"
 import { CarReservationForm } from "@/components/car-details/car-reservation-form"
 import { SimilarCars } from "@/components/car-details/similar-cars"
 import { notFound } from "next/navigation"
-import { getVehicle, vehicles } from "@/lib/vehicles-data"
+import { apiGetVehicle } from "@/lib/api-client"
 
-export async function generateMetadata({ params }: { params: { id: string } }) {
-  const car = getVehicle(params.id)
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const result = await apiGetVehicle(slug)
+  const car = result.success ? result.data : null
   if (!car) return { title: "Carro não encontrado" }
 
   return {
     title: `${car.name} ${car.year} | Drive-In Locadora`,
-    description: car.description,
+    description: (car as any).description || "Detalhes do veículo",
   }
 }
 
-export default function CarDetailsPage({ params }: { params: { id: string } }) {
-  const car = getVehicle(params.id)
+export default async function CarDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const result = await apiGetVehicle(slug)
+  const car = result.success ? result.data : null
 
   if (!car) {
     notFound()
@@ -53,20 +57,27 @@ export default function CarDetailsPage({ params }: { params: { id: string } }) {
 
             <div>
               <h2 className="text-2xl font-bold mb-4">Sobre este veículo</h2>
-              <p className="text-muted-foreground leading-relaxed">{car.description}</p>
+              <p className="text-muted-foreground leading-relaxed">{(car as any).description || "Descrição não disponível."}</p>
             </div>
 
-            <CarSpecifications car={car} />
+            <CarSpecifications car={{
+              passengers: car.passengers,
+              transmission: car.transmission,
+              fuel: car.fuel,
+              doors: car.doors ?? 4,
+              airConditioning: car.airConditioning ?? false,
+              features: car.features ?? []
+            }} />
           </div>
 
           {/* Right Column - Reservation Form */}
           <div className="lg:col-span-1">
-            <CarReservationForm car={car} />
+            <CarReservationForm car={car as any} />
           </div>
         </div>
 
         {/* Similar Cars */}
-        <SimilarCars currentCarId={car.id} category={car.category} />
+        <SimilarCars currentCarId={(car as any).id} category={(car as any).category} />
       </div>
     </div>
   )

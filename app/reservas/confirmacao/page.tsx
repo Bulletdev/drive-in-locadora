@@ -8,7 +8,8 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
 
-const extrasMap = {
+type Extra = { name: string; price: number }
+const extrasMap: Record<string, Extra> = {
   insurance: { name: "Seguro Total", price: 50 },
   gps: { name: "GPS", price: 20 },
   childSeat: { name: "Cadeirinha Infantil", price: 15 },
@@ -16,6 +17,11 @@ const extrasMap = {
 
 function ReservationConfirmationContent() {
   const searchParams = useSearchParams()
+
+  const extrasIds = JSON.parse(searchParams.get("extras") || "[]") as string[]
+  const parsedExtras: Extra[] = extrasIds
+    .map((id) => extrasMap[id as keyof typeof extrasMap])
+    .filter((e): e is Extra => !!e)
 
   const reservation = {
     id: `RES-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`,
@@ -26,15 +32,15 @@ function ReservationConfirmationContent() {
     returnLocation: searchParams.get("returnLocation") || "",
     days: parseInt(searchParams.get("days") || "0"),
     pricePerDay: parseFloat(searchParams.get("pricePerDay") || "0"),
-    extras: JSON.parse(searchParams.get("extras") || "[]").map((id: string) => extrasMap[id as keyof typeof extrasMap]),
-    customer: {clear
+    extras: parsedExtras,
+    customer: {
       name: searchParams.get("name") || "",
       email: searchParams.get("email") || "",
       phone: searchParams.get("phone") || "",
     },
   }
 
-  const extrasTotal = reservation.extras.reduce((sum: number, extra: { price: number }) => sum + extra.price, 0)
+  const extrasTotal = reservation.extras.reduce((sum: number, extra: Extra) => sum + extra.price, 0)
   const subtotal = reservation.days * reservation.pricePerDay
   const total = subtotal + extrasTotal * reservation.days
 

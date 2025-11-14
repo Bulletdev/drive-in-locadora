@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -9,6 +9,9 @@ import { Calendar, Car, User, LogOut, Clock, MapPin, FileText } from "lucide-rea
 import Link from "next/link"
 import { signOut } from "next-auth/react"
 import { EditProfileDialog } from "./edit-profile-dialog"
+import { useSearchParams } from "next/navigation"
+
+import { apiGetMyReservations, apiGetVehicle } from "@/lib/api-client"
 
 interface ClientDashboardProps {
   user: {
@@ -19,37 +22,8 @@ interface ClientDashboardProps {
     cpf: string
     createdAt: string
   }
+  accessToken: string
 }
-
-const reservations = [
-  {
-    id: "RES-2024-001",
-    car: "Toyota Corolla 2024",
-    status: "active",
-    pickupDate: "15/02/2024",
-    returnDate: "20/02/2024",
-    pickupLocation: "Aeroporto de Guarulhos",
-    total: 1150,
-  },
-  {
-    id: "RES-2024-002",
-    car: "Jeep Compass 2024",
-    status: "completed",
-    pickupDate: "01/01/2024",
-    returnDate: "05/01/2024",
-    pickupLocation: "Centro - São Paulo",
-    total: 1250,
-  },
-  {
-    id: "RES-2024-003",
-    car: "Honda Civic 2024",
-    status: "cancelled",
-    pickupDate: "10/01/2024",
-    returnDate: "12/01/2024",
-    pickupLocation: "Av. Paulista",
-    total: 380,
-  },
-]
 
 const statusConfig = {
   active: { label: "Ativa", variant: "default" as const, color: "bg-green-500" },
@@ -57,8 +31,68 @@ const statusConfig = {
   cancelled: { label: "Cancelada", variant: "outline" as const, color: "bg-gray-500" },
 }
 
-export function ClientDashboard({ user }: ClientDashboardProps) {
+export function ClientDashboard({ user, accessToken }: ClientDashboardProps) {
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false)
+  const [displayReservations, setDisplayReservations] = useState<Array<{
+    id: string
+    car: string
+    status: "active" | "completed" | "cancelled"
+    pickupDate: string
+    returnDate: string
+    pickupLocation: string
+    total?: number
+  }>>([])
+  const searchParams = useSearchParams()
+  const cancelledId = searchParams.get("cancelled")
+
+  // Carregar reservas reais da API (MySQL) com accessToken
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await apiGetMyReservations(accessToken)
+        if (!res.success || !res.data) return
+        const reservationsRaw = res.data
+        const out: Array<{
+          id: string
+          car: string
+          status: "active" | "completed" | "cancelled"
+          pickupDate: string
+          returnDate: string
+          pickupLocation: string
+          total?: number
+        }> = []
+        for (const r of reservationsRaw) {
+          // Buscar detalhes do veículo para nome
+          let carName = r.carId
+          try {
+            const v = await apiGetVehicle(r.carId)
+            if (v.success && v.data) {
+              carName = `${v.data.name} ${v.data.year}`
+            }
+          } catch {}
+          // Derivar status por data
+          const today = new Date()
+          const end = r.returnDate ? new Date(r.returnDate) : today
+          const start = r.pickupDate ? new Date(r.pickupDate) : today
+          let status: "active" | "completed" | "cancelled" = "active"
+          if (end < today) status = "completed"
+          out.push({
+            id: r.id,
+            car: carName,
+            status,
+            pickupDate: start.toLocaleDateString("pt-BR"),
+            returnDate: end.toLocaleDateString("pt-BR"),
+            pickupLocation: r.pickupLocation,
+          })
+        }
+        if (mounted) setDisplayReservations(out)
+      } catch (e) {
+        // Sem fallback/mocks
+      }
+    })()
+    return () => { mounted = false }
+  }, [accessToken])
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: "/" })
@@ -80,6 +114,21 @@ export function ClientDashboard({ user }: ClientDashboardProps) {
             Sair
           </Button>
         </div>
+
+        {/* Aviso de cancelamento */}
+        {cancelledId && (
+          <Card className="border-green-500">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold">Reserva {cancelledId} cancelada com sucesso.</p>
+                  <p className="text-sm text-muted-foreground">Se precisar, você pode criar uma nova reserva abaixo.</p>
+                </div>
+                <Badge variant="secondary">Cancelada</Badge>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Dashboard Content */}
         <Tabs defaultValue="reservations" className="space-y-6">
@@ -105,7 +154,7 @@ export function ClientDashboard({ user }: ClientDashboardProps) {
                       <Car className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold">{reservations.filter((r) => r.status === "active").length}</p>
+                      <p className="text-2xl font-bold">{displayReservations.filter((r) => r.status === "active").length}</p>
                       <p className="text-sm text-muted-foreground">Reservas Ativas</p>
                     </div>
                   </div>
@@ -120,7 +169,7 @@ export function ClientDashboard({ user }: ClientDashboardProps) {
                     </div>
                     <div>
                       <p className="text-2xl font-bold">
-                        {reservations.filter((r) => r.status === "completed").length}
+                        {displayReservations.filter((r) => r.status === "completed").length}
                       </p>
                       <p className="text-sm text-muted-foreground">Reservas Concluídas</p>
                     </div>
@@ -143,7 +192,7 @@ export function ClientDashboard({ user }: ClientDashboardProps) {
             {/* Reservations List */}
             <div className="space-y-4">
               <h2 className="text-2xl font-bold">Histórico de Reservas</h2>
-              {reservations.map((reservation) => (
+              {displayReservations.map((reservation) => (
                 <Card key={reservation.id}>
                   <CardContent className="pt-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -177,8 +226,8 @@ export function ClientDashboard({ user }: ClientDashboardProps) {
 
                       <div className="flex flex-col items-end gap-3">
                         <div className="text-right">
-                          <p className="text-sm text-muted-foreground">Total</p>
-                          <p className="text-2xl font-bold text-primary">R$ {reservation.total.toFixed(2)}</p>
+                          <p className="text-sm text-muted-foreground">Código</p>
+                          <p className="text-2xl font-bold text-primary">{reservation.id}</p>
                         </div>
                         <Button variant="outline" size="sm" asChild>
                           <Link href={`/area-cliente/reserva/${reservation.id}`}>
@@ -243,7 +292,7 @@ export function ClientDashboard({ user }: ClientDashboardProps) {
         </Tabs>
 
         {/* Edit Profile Dialog */}
-        <EditProfileDialog user={user} open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen} />
+        <EditProfileDialog user={user} accessToken={accessToken} open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen} />
       </div>
     </div>
   )

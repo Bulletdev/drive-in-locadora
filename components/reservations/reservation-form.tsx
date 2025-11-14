@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,10 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Calendar, Car, Shield, Navigation, Baby, Loader2 } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { getAvailableVehicles } from "@/lib/vehicles-data"
-
-const cars = getAvailableVehicles()
-
+import { apiGetVehicles, apiCreateReservation, apiMe } from "@/lib/api-client"
+import { useSession } from "next-auth/react"
 const locations = [
   "Aeroporto de Guarulhos",
   "Aeroporto de Congonhas",
@@ -23,16 +21,66 @@ const locations = [
   "Shopping Morumbi",
 ]
 
+export function ReservationForm() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { data: session, status } = useSession()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [cars, setCars] = useState<Array<{
+    id: string
+    name: string
+    year: number
+    pricePerDay: number
+    available: boolean
+  }>>([])
+  const [loadingCars, setLoadingCars] = useState(true)
+
 const extras = [
   { id: "insurance", name: "Seguro Total", price: 50, icon: Shield },
   { id: "gps", name: "GPS", price: 20, icon: Navigation },
   { id: "childSeat", name: "Cadeirinha Infantil", price: 15, icon: Baby },
 ]
 
-export function ReservationForm() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      const res = await apiGetVehicles()
+      if (!mounted) return
+      if (res.success && res.data) {
+        setCars(
+          res.data
+            .filter((v) => v.available)
+            .map((v) => ({ id: v.id, name: v.name, year: v.year, pricePerDay: v.pricePerDay, available: v.available })),
+        )
+      }
+      setLoadingCars(false)
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  // Prefill com dados do usuário autenticado
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      if (status !== "authenticated" || !session) return
+      const accessToken = (session as any).accessToken as string | undefined
+      if (!accessToken) return
+      const me = await apiMe(accessToken)
+      if (!mounted) return
+      if (me.success && me.data) {
+        setFormData((prev) => ({
+          ...prev,
+          name: me.data.name || prev.name,
+          email: me.data.email || prev.email,
+          phone: me.data.phone || prev.phone,
+          cpf: me.data.cpf || prev.cpf,
+        }))
+      }
+    })()
+    return () => { mounted = false }
+  }, [status, session])
   const [formData, setFormData] = useState({
     carId: searchParams.get("car") || "",
     pickupDate: searchParams.get("pickup") || "",
@@ -65,27 +113,29 @@ export function ReservationForm() {
     e.preventDefault()
     setIsSubmitting(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    const extrasDetailed = formData.selectedExtras.map((id) => {
+      const extra = extras.find((e) => e.id === id)
+      return extra ? { id: extra.id, name: extra.name, price: extra.price } : { id, name: id, price: 0 }
+    })
 
-    // Build query string with reservation data
-    const reservationData = new URLSearchParams({
+    const accessToken = (session as any)?.accessToken as string | undefined
+    const createRes = await apiCreateReservation({
       carId: formData.carId,
-      carName: selectedCar?.name || "",
       pickupDate: formData.pickupDate,
       returnDate: formData.returnDate,
       pickupLocation: formData.pickupLocation,
       returnLocation: formData.returnLocation,
-      days: days.toString(),
-      pricePerDay: selectedCar?.pricePerDay.toString() || "0",
-      extras: JSON.stringify(formData.selectedExtras),
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-    })
-
-    console.log("[v0] Reservation submitted:", formData)
-    router.push(`/reservas/confirmacao?${reservationData.toString()}`)
+      selectedExtras: extrasDetailed,
+      customer: { name: formData.name, email: formData.email, phone: formData.phone },
+    }, accessToken)
+    console.log("[v0] Reservation submitted:", formData, createRes)
+    if (createRes.success && createRes.data?.id) {
+      router.push(`/area-cliente/reserva/${createRes.data.id}`)
+    } else {
+      // Fallback: stay on page and show a minimal error message
+      alert("Falha ao criar reserva. Tente novamente.")
+      setIsSubmitting(false)
+    }
   }
 
   const handleExtraToggle = (extraId: string) => {
@@ -121,11 +171,17 @@ export function ReservationForm() {
                   <SelectValue placeholder="Selecione um veículo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {cars.map((car) => (
-                    <SelectItem key={car.id} value={car.id}>
-                      {car.name} {car.year} - R$ {car.pricePerDay}/dia
+                  {loadingCars ? (
+                    <SelectItem value="__loading__" disabled>
+                      Carregando veículos...
                     </SelectItem>
-                  ))}
+                  ) : (
+                    cars.map((car) => (
+                      <SelectItem key={car.id} value={car.id}>
+                        {car.name} {car.year} - R$ {car.pricePerDay}/dia
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </CardContent>

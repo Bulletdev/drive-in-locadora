@@ -1,9 +1,14 @@
+"use client"
+
 import Link from "next/link"
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
+import { useEffect, useState } from "react"
+import { apiGetVehicles } from "@/lib/api-client"
 import { getAllVehicles } from "@/lib/vehicles-data"
+import { slugifyVehicle } from "@/lib/utils"
 
 interface SimilarCarsProps {
   currentCarId: string
@@ -11,20 +16,34 @@ interface SimilarCarsProps {
 }
 
 export function SimilarCars({ currentCarId, category }: SimilarCarsProps) {
-  const allVehicles = getAllVehicles()
+  const [similarCars, setSimilarCars] = useState<Array<{
+    id: string
+    name: string
+    year: number
+    images: string[]
+    pricePerDay: number
+    category: string
+  }>>([])
 
-  // Filtrar veículos da mesma categoria, excluindo o atual
-  let similarCars = allVehicles
-    .filter((car) => car.category === category && car.id !== currentCarId)
-    .slice(0, 3)
-
-  // Se não houver veículos suficientes da mesma categoria, pegar outros disponíveis
-  if (similarCars.length < 3) {
-    const remainingCars = allVehicles
-      .filter((car) => car.id !== currentCarId && !similarCars.find(sc => sc.id === car.id))
-      .slice(0, 3 - similarCars.length)
-    similarCars = [...similarCars, ...remainingCars]
-  }
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      const result = await apiGetVehicles()
+      if (!mounted) return
+      const all = result.success && result.data ? result.data : getAllVehicles()
+      let sims = all.filter((car) => car.category === category && car.id !== currentCarId).slice(0, 3)
+      if (sims.length < 3) {
+        const remaining = all
+          .filter((car) => car.id !== currentCarId && !sims.find((sc) => sc.id === car.id))
+          .slice(0, 3 - sims.length)
+        sims = [...sims, ...remaining]
+      }
+      setSimilarCars(sims)
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [currentCarId, category])
 
   return (
     <div>
@@ -46,7 +65,7 @@ export function SimilarCars({ currentCarId, category }: SimilarCarsProps) {
               <h3 className="text-xl font-bold mb-2">{car.name} {car.year}</h3>
               <p className="text-2xl font-bold text-primary mb-4">R$ {car.pricePerDay}/dia</p>
               <Button variant="outline" className="w-full bg-transparent" asChild>
-                <Link href={`/frota/${car.id}`}>
+                <Link href={`/frota/${slugifyVehicle(car.name, car.year)}`}>
                   Ver detalhes
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Link>

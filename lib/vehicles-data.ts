@@ -354,3 +354,9 @@ export function getAllVehicles(): Vehicle[] {
 export function getAvailableVehicles(): Vehicle[] {
   return getAllVehicles().filter((vehicle) => vehicle.available)
 }
+
+// Fallback helper: match vehicle by slug constructed from name and year
+import { slugifyVehicle } from "@/lib/utils"
+export function getVehicleBySlug(slug: string): Vehicle | undefined {
+  return getAllVehicles().find((v) => slugifyVehicle(v.name, v.year) === slug)
+}

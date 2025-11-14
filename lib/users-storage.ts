@@ -100,3 +100,15 @@ export function getUserByEmail(email: string): Omit<User, "passwordHash"> | null
   const { passwordHash, ...userWithoutPassword } = user
   return userWithoutPassword
 }
+
+export function updateUserByEmail(
+  email: string,
+  updates: Partial<Pick<User, "name" | "phone">>,
+): Omit<User, "passwordHash"> | null {
+  const user = users.find((u) => u.email === email)
+  if (!user) return null
+  if (typeof updates.name === "string") user.name = updates.name
+  if (typeof updates.phone === "string") user.phone = updates.phone
+  const { passwordHash, ...userWithoutPassword } = user
+  return userWithoutPassword
+}

@@ -14,6 +14,9 @@ export const metadata: Metadata = {
   title: "Drive-In Locadora | Aluguel de Carros",
   description: "Mais que carros, entregamos caminhos. Alugue veículos novos e bem mantidos com a Drive-In Locadora.",
   generator: "v0.app",
+  icons: {
+    icon: "/images/drivein11.png",
+  },
 }
 
 export default function RootLayout({
@@ -31,7 +34,7 @@ export default function RootLayout({
             <Footer />
             <WhatsAppButton />
           </Suspense>
-          <Analytics />
+          {process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === '1' && <Analytics />}
         </Providers>
       </body>
     </html>
