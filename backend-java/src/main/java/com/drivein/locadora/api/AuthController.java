@@ -5,7 +5,6 @@ import com.drivein.locadora.entity.UserEntity;
 import com.drivein.locadora.repo.UserRepository;
 import com.drivein.locadora.service.RegistrationService;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
