@@ -72,10 +72,10 @@ const extras = [
       if (me.success && me.data) {
         setFormData((prev) => ({
           ...prev,
-          name: me.data.name || prev.name,
-          email: me.data.email || prev.email,
-          phone: me.data.phone || prev.phone,
-          cpf: me.data.cpf || prev.cpf,
+          name: me.data?.name ?? prev.name,
+          email: me.data?.email ?? prev.email,
+          phone: me.data?.phone ?? prev.phone,
+          cpf: me.data?.cpf ?? prev.cpf,
         }))
       }
     })()
