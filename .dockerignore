@@ -1,0 +1,10 @@
+node_modules
+.next
+dist
+target
+**/*.log
+.git
+.vscode
+Dockerfile*
+docker-compose*.yml
+pnpm-store
