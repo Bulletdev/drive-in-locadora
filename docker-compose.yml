@@ -1,0 +1,78 @@
+services:
+  api:
+    build:
+      context: ./backend-java
+      dockerfile: Dockerfile
+    container_name: drivein-api
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      SERVER_PORT: "8080"
+      SPRING_PROFILES_ACTIVE: "mysql"
+      DB_URL: "jdbc:mysql://drivein-mysql:3306/drivein?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC"
+      DB_USERNAME: "root"
+      DB_PASSWORD: "root"
+      JPA_DDL_AUTO: "update"
+
+  db:
+    image: mysql:8.0
+    container_name: drivein-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: drivein
+    ports:
+      - "3366:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database/mysql:/migrations:ro
+      - ./database/docker-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  adminer:
+    image: adminer:latest
+    container_name: drivein-adminer
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8880:8080"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_ADMIN_EMAILS: "admin@drivein.local,vendedor@drivein.local"
+        API_BASE_URL: "http://drivein-api:8080"
+        NEXT_PUBLIC_API_BASE_URL: "http://localhost:8081"
+        NEXTAUTH_URL: "http://localhost:3737"
+        NEXTAUTH_SECRET: "demo-secret-please-change"
+        AUTH_SECRET: "demo-secret-please-change"
+    container_name: drivein-web
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_ADMIN_EMAILS: "admin@drivein.local,vendedor@drivein.local"
+      API_BASE_URL: "http://drivein-api:8080"
+      NEXT_PUBLIC_API_BASE_URL: "http://localhost:8081"
+      NEXTAUTH_URL: "http://localhost:3737"
+      NEXTAUTH_SECRET: "demo-secret-please-change"
+      AUTH_SECRET: "demo-secret-please-change"
+      PORT: "3337"
+    depends_on:
+      api:
+        condition: service_started
+      db:
+        condition: service_healthy
+    ports:
+      - "3737:3337"
+
+volumes:
+  db_data:
+    driver: local
