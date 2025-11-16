@@ -100,7 +100,7 @@ public class VehicleController {
 
     @GetMapping("/{id}")
     public Vehicle get(@PathVariable("id") String id) {
-        return vehicleRepository.findById(id)
+        return vehicleRepository.findById(Objects.requireNonNull(id))
                 .map(this::toModel)
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Vehicle not found"));
     }
